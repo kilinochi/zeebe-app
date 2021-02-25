@@ -13,11 +13,12 @@ class EmergencyService(
 
     fun startEvent(reason: EmergencyReasonDto) {
         val emergencyReason = reason.emergencyReason
+        val id = UUID.randomUUID().toString()
         val event = zeebeClient.newCreateInstanceCommand().bpmnProcessId("EMERGENCY_PROCESS")
             .latestVersion().variables("{\n" +
                     "  \"emergencyReason\": {\n" +
                     "    \"status\": \"$emergencyReason\",\n" +
-                    "    \"id\": ${UUID.randomUUID()}\n" +
+                    "    \"id\": \"$id\"\n" +
                     "  }\n" +
                     "}").send().join()
         logger.info(
