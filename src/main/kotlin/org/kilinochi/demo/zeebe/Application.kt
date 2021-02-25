@@ -8,7 +8,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 @SpringBootApplication
 @EnableZeebeClient
 @ZeebeDeployment(classPathResources = ["emergency-process.bpmn"])
-open class Application
+class Application
 
 fun main(args: Array<String>) {
     SpringApplication.run(Application::class.java, *args)
