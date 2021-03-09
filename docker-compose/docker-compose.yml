@@ -1,0 +1,125 @@
+version: "3.5"
+
+services:
+  zeebe:
+    container_name: zeebe
+    image: camunda/zeebe:0.26.0
+    hostname: zeebe
+    environment:
+      SPRING_CONFIG_ADDITIONAL_LOCATION: /usr/local/zeebe/config/application.yml
+      ZEEBE_BROKER_EXPORTERS_KAFKA_ARGS_PRODUCER_SERVERS: "kafka:9092"
+    ports:
+      - "26500:26500"
+    volumes:
+      - ./lib/zeebe-kafka-exporter-2.0.0.jar:/usr/local/zeebe/exporters/zeebe-kafka-exporter-2.0.0.jar
+      - ./application.yml:/usr/local/zeebe/config/application.yml
+    networks:
+      - zeebe_network
+  #operate:
+  #  container_name: operate
+  #  image: camunda/operate:0.24.2
+  #  ports:
+  #    - "8050:8050"
+  #  volumes:
+  #    - ./operate.yml:/usr/local/operate/config/operate.yml
+  #  networks:
+  #    - zeebe_network
+  #  links:
+  #    - elasticsearch:elasticsearch
+  #  depends_on:
+  #    - zeebe
+  #    - elasticsearch
+  elasticsearch:
+    container_name: elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.6.1
+    hostname: elasticsearch
+    ports:
+      - "9200:9200"
+    environment:
+      - discovery.type=single-node
+      - cluster.name=elasticsearch
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    networks:
+      - zeebe_network
+  logstash:
+    container_name: logstash
+    image: docker.elastic.co/logstash/logstash:7.6.1
+    hostname: logstash
+    ports:
+      - "5046:5046"
+    volumes:
+      - ./logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+      - ./logstash/pipelines:/usr/share/logstash/config/pipelines
+    networks:
+      - zeebe_network
+    links:
+       - elasticsearch:elasticsearch
+    depends_on:
+      - elasticsearch
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana-oss:7.6.1
+    hostname: kibana
+    environment:
+       ELASTICSEARCH_URL: http://elasticsearch:9200
+       ELASTICSEARCH_HOST: http://elasticsearch:9200
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+        - IPC_LOCK
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "5601:5601"
+    networks:
+      - zeebe_network
+    links:
+      - elasticsearch:elasticsearch
+    depends_on:
+      - elasticsearch
+  kafka:
+    image: 'wurstmeister/kafka:latest'
+    container_name: kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    networks:
+      - zeebe_network
+    environment:
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_ADVERTISED_HOST_NAME: kafka
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_CREATE_TOPICS_SEPARATOR: "$$'\n'"
+      KAFKA_CREATE_TOPICS: |
+        zeebe-collector:1:1
+        alfamobile.zeebe.variables:1:1
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper:zookeeper
+  zookeeper:
+    image: 'wurstmeister/zookeeper:latest'
+    container_name: zookeeper
+    hostname: zookeeper
+    networks:
+      - zeebe_network
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+
+volumes:
+  elasticsearch-data:
+  esdata:
+    driver: local
+
+networks:
+  zeebe_network:
+    name: network_zeebe

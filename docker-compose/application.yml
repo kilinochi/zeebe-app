@@ -1,0 +1,177 @@
+--- # ----------------------------------------------------
+
+# Zeebe Standalone Broker configuration file (with embedded gateway)
+
+# This file is based on broker.standalone.yaml.template but stripped down to contain only a limited
+# set of configuration options. These are a good starting point to get to know Zeebe.
+# For advanced configuration options, have a look at the templates in this folder.
+
+# !!! Note that this configuration is not suitable for running a standalone gateway. !!!
+# If you want to run a standalone gateway node, please have a look at gateway.yaml.template
+
+# ----------------------------------------------------
+# Byte sizes
+# For buffers and others must be specified as strings and follow the following
+# format: "10U" where U (unit) must be replaced with KB = Kilobytes, MB = Megabytes or GB = Gigabytes.
+# If unit is omitted then the default unit is simply bytes.
+# Example:
+# sendBufferSize = "16MB" (creates a buffer of 16 Megabytes)
+#
+# Time units
+# Timeouts, intervals, and the likes, must be specified either in the standard ISO-8601 format used
+# by java.time.Duration, or as strings with the following format: "VU", where:
+#   - V is a numerical value (e.g. 1, 5, 10, etc.)
+#   - U is the unit, one of: ms = Millis, s = Seconds, m = Minutes, or h = Hours
+#
+# Paths:
+# Relative paths are resolved relative to the installation directory of the broker.
+zeebe:
+  broker:
+    gateway:
+      # Enable the embedded gateway to start on broker startup.
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_GATEWAY_ENABLE.
+      enable: true
+
+      network:
+        # Sets the port the embedded gateway binds to.
+        # This setting can also be overridden using the environment variable ZEEBE_BROKER_GATEWAY_NETWORK_PORT.
+        port: 26500
+
+      security:
+        # Enables TLS authentication between clients and the gateway
+        # This setting can also be overridden using the environment variable ZEEBE_BROKER_GATEWAY_SECURITY_ENABLED.
+        enabled: false
+
+    network:
+      # Controls the default host the broker should bind to. Can be overwritten on a
+      # per binding basis for client, management and replication
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_NETWORK_HOST.
+      host: 0.0.0.0
+
+    data:
+      # Specify a list of directories in which data is stored.
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_DATA_DIRECTORIES.
+      directories: [data]
+      # The size of data log segment files.
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_DATA_LOGSEGMENTSIZE.
+      logSegmentSize: 512MB
+      # How often we take snapshots of streams (time unit)
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_DATA_SNAPSHOTPERIOD.
+      snapshotPeriod: 15m
+
+    cluster:
+      # Specifies the Zeebe cluster size.
+      # This can also be overridden using the environment variable ZEEBE_BROKER_CLUSTER_CLUSTERSIZE.
+      clusterSize: 1
+      # Controls the replication factor, which defines the count of replicas per partition.
+      # This can also be overridden using the environment variable ZEEBE_BROKER_CLUSTER_REPLICATIONFACTOR.
+      replicationFactor: 1
+      # Controls the number of partitions, which should exist in the cluster.
+      # This can also be overridden using the environment variable ZEEBE_BROKER_CLUSTER_PARTITIONSCOUNT.
+      partitionsCount: 1
+
+    threads:
+      # Controls the number of non-blocking CPU threads to be used.
+      # WARNING: You should never specify a value that is larger than the number of physical cores
+      # available. Good practice is to leave 1-2 cores for ioThreads and the operating
+      # system (it has to run somewhere). For example, when running Zeebe on a machine
+      # which has 4 cores, a good value would be 2.
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_THREADS_CPUTHREADCOUNT
+      cpuThreadCount: 2
+      # Controls the number of io threads to be used.
+      # This setting can also be overridden using the environment variable ZEEBE_BROKER_THREADS_IOTHREADCOUNT
+      ioThreadCount: 2
+    # Kafka Exporter ----------
+    # An example configuration for the elasticsearch exporter:
+    #
+    # These setting can also be overridden using the environment variables "ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_..."
+    #
+    exporters:
+      kafka:
+        className: io.zeebe.exporters.kafka.KafkaExporter
+        jarPath: /usr/local/zeebe/exporters/zeebe-kafka-exporter-2.0.0.jar
+        args:
+          # Controls how many records can have been sent to the Kafka broker without
+          # any acknowledgment Once the limit is reached the exporter will block and
+          # wait until either one record is acknowledged
+          maxInFlightRecords: 1000
+          # How often should the exporter drain the in flight records' queue of completed
+          # requests and update the broker with the guaranteed latest exported position
+          inFlightRecordCheckIntervalMs: 1000
+
+          # Producer specific configuration
+          producer:
+            # The list of initial Kafka broker contact points. The format should be the same
+            # one as the ProducerConfig expects, i.e. "host:port"
+            # Maps to ProducerConfig.BOOTSTRAP_SERVERS_CONFIG
+            # For example:
+            servers:
+              - kafka:9092
+            #servers: [ ]
+            # Controls how long the producer will wait for a request to be acknowledged by
+            # the Kafka broker before retrying it
+            # Maps to ProducerConfig.REQUEST_TIMEOUT_MS_CONFIG
+            requestTimeoutMs: 5000
+            # Grace period when shutting down the producer in milliseconds
+            closeTimeoutMs: 5000
+            # Producer client identifier
+            clientId: zeebe
+            # Max concurrent requests to the Kafka broker; note that in flight records are batched such that
+            # in one request you can easily have a thousand records, depending on the producer's batch
+            # configuration.
+            maxConcurrentRequests: 3
+
+            # Any setting under the following section will be passed verbatim to
+            # ProducerConfig; you can use this to configure authentication, compression,
+            # etc. Note that you can overwrite some important settings, so avoid changing
+            # idempotency, delivery timeout, and retries, unless you know what you're doing
+            config: |
+              linger.ms=5
+              buffer.memory=8388608
+              batch.size=32768
+              max.block.ms=5000
+
+          # Controls which records are pushed to Kafka and to which topic
+          # Each entry is a sub-map which can contain two entries:
+          #     type => string
+          #     topic => string
+          #
+          # Topic is the topic to which the record with the given value type
+          # should be sent to, e.g. for a deployment record below we would
+          # send the record to "zeebe-deployment" topic.
+          #
+          # Type is a comma separated string of accepted record types, allowing you to filter if you
+          # want nothing (""), commands ("command"), events ("events"), or rejections ("rejection"),
+          # or a combination of the three, e.g. "command,event".
+          #
+          # To omit certain records entirely, set type to an empty string. For example,
+          # records:
+          #   deployment: { type: "" }
+          records:
+            # If a record value type is omitted in your configuration file,
+            # it will fall back to whatever is configured in the defaults
+            defaults: { type: "event", topic: zeebe-collector }
+            # For records with a value of type DEPLOYMENT
+            deployment: { topic: zeebe-collector }
+            # For records with a value of type INCIDENT
+            incident: { topic: zeebe-collector }
+            # For records with a value of type JOB_BATCH
+            jobBatch: { topic: zeebe-collector }
+            # For records with a value of type JOB
+            job: { topic: zeebe-collector }
+            # For records with a value of type MESSAGE
+            message: { topic: zeebe-collector }
+            # For records with a value of type MESSAGE_SUBSCRIPTION
+            messageSubscription: { topic: zeebe-collector }
+            # For records with a value of type MESSAGE_START_EVENT_SUBSCRIPTION
+            messageStartEventSubscription: { topic: zeebe-collector }
+            # For records with a value of type TIMER
+            timer: { topic: zeebe-collector }
+            # For records with a value of type VARIABLE
+            variable: { topic: alfamobile.zeebe.variables }
+            # For records with a value of type WORKFLOW_INSTANCE
+            workflowInstance: { topic: zeebe-collector }
+            # For records with a value of type WORKFLOW_INSTANCE_RESULT
+            workflowInstanceResult: { topic: zeebe-collector }
+            # For records with a value of type WORKFLOW_INSTANCE_SUBSCRIPTION
+            workflowInstanceSubscription: { topic: zeebe-collector }
