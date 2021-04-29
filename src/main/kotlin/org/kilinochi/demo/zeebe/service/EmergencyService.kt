@@ -15,11 +15,8 @@ class EmergencyService(
         val emergencyReason = reason.emergencyReason
         val id = UUID.randomUUID().toString()
         val event = zeebeClient.newCreateInstanceCommand().bpmnProcessId("EMERGENCY_PROCESS")
-            .latestVersion().variables("{\n" +
-                    "  \"emergencyReason\": {\n" +
-                    "    \"status\": \"$emergencyReason\",\n" +
-                    "    \"id\": \"$id\"\n" +
-                    "  }\n" +
+            .latestVersion().variables("{ \n" +
+                    "  \"emergencyReason\": \"$emergencyReason\"\n" +
                     "}").send().join()
         logger.info(
             "started instance for workflowKey='{}', bpmnProcessId='{}', version='{}' with workflowInstanceKey='{}'",
