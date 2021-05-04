@@ -133,7 +133,7 @@ services:
         max-size: "10m"
         max-file: "10"
     ports:
-      - '7003:7003'
+      - '9700:9700'
 
 volumes:
   elasticsearch-data:

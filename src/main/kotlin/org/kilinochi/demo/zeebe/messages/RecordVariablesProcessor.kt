@@ -12,7 +12,7 @@ class RecordVariablesProcessor {
 
     @StreamListener(RecordVariablesSink.INPUT)
     fun processConsumeVariables(record: String) {
-        logger.info(record)
+        logger.info("Record from kafka is = { $record } ")
     }
 
     private companion object {
