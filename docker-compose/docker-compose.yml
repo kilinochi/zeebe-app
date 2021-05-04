@@ -29,59 +29,59 @@ services:
   #  depends_on:
   #    - zeebe
   #    - elasticsearch
-  elasticsearch:
-    container_name: elasticsearch
-    image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.6.1
-    hostname: elasticsearch
-    ports:
-      - "9200:9200"
-    environment:
-      - discovery.type=single-node
-      - cluster.name=elasticsearch
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    networks:
-      - zeebe_network
-  logstash:
-    container_name: logstash
-    image: docker.elastic.co/logstash/logstash:7.6.1
-    hostname: logstash
-    ports:
-      - "5046:5046"
-    volumes:
-      - ./logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml
-      - ./logstash/pipelines:/usr/share/logstash/config/pipelines
-    networks:
-      - zeebe_network
-    links:
-       - elasticsearch:elasticsearch
-    depends_on:
-      - elasticsearch
-  kibana:
-    container_name: kibana
-    image: docker.elastic.co/kibana/kibana-oss:7.6.1
-    hostname: kibana
-    environment:
-       ELASTICSEARCH_URL: http://elasticsearch:9200
-       ELASTICSEARCH_HOST: http://elasticsearch:9200
-    ulimits:
-      memlock:
-        soft: -1
-        hard: -1
-      nofile:
-        soft: 65536
-        hard: 65536
-    cap_add:
-        - IPC_LOCK
-    volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
-    ports:
-      - "5601:5601"
-    networks:
-      - zeebe_network
-    links:
-      - elasticsearch:elasticsearch
-    depends_on:
-      - elasticsearch
+  #elasticsearch:
+  #  container_name: elasticsearch
+  #  image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.6.1
+  #  hostname: elasticsearch
+  #  ports:
+  #    - "9200:9200"
+  #  environment:
+  #    - discovery.type=single-node
+  #    - cluster.name=elasticsearch
+  #    - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+  #  networks:
+  #    - zeebe_network
+  #logstash:
+  #  container_name: logstash
+  #  image: docker.elastic.co/logstash/logstash:7.6.1
+  #  hostname: logstash
+  #  ports:
+  #    - "5046:5046"
+  #  volumes:
+  #    - ./logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+  #    - ./logstash/pipelines:/usr/share/logstash/config/pipelines
+  #  networks:
+  #    - zeebe_network
+  #  links:
+  #     - elasticsearch:elasticsearch
+  #  depends_on:
+  #    - elasticsearch
+  #kibana:
+  #  container_name: kibana
+  #  image: docker.elastic.co/kibana/kibana-oss:7.6.1
+  #  hostname: kibana
+  #  environment:
+  #     ELASTICSEARCH_URL: http://elasticsearch:9200
+  #     ELASTICSEARCH_HOST: http://elasticsearch:9200
+  #  ulimits:
+  #    memlock:
+  #      soft: -1
+  #      hard: -1
+  #    nofile:
+  #      soft: 65536
+  #      hard: 65536
+  #  cap_add:
+  #      - IPC_LOCK
+  #  volumes:
+  #    - elasticsearch-data:/usr/share/elasticsearch/data
+  #  ports:
+  #    - "5601:5601"
+  #  networks:
+  #    - zeebe_network
+  #  links:
+  #    - elasticsearch:elasticsearch
+  #  depends_on:
+  #    - elasticsearch
   kafka:
     image: 'wurstmeister/kafka:latest'
     container_name: kafka
@@ -114,6 +114,26 @@ services:
       - "2181:2181"
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
+
+  zeebe-app:
+    restart: always
+    build:
+      ../.
+    container_name: zeebe-app
+    networks:
+      - zeebe_network
+    depends_on:
+      - kafka
+      - zeebe
+    links:
+      - kafka:kafka
+      - zeebe:zeebe
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "10"
+    ports:
+      - '7003:7003'
 
 volumes:
   elasticsearch-data:

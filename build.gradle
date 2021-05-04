@@ -2,16 +2,21 @@ plugins {
     id 'java'
     id 'org.jetbrains.kotlin.jvm' version '1.4.30'
     id "org.jetbrains.kotlin.plugin.spring" version "1.4.30-RC"
+    id "application"
+    id "org.springframework.boot" version "2.4.3"
+    id "io.spring.dependency-management" version "1.0.11.RELEASE"
 }
 
 group 'org.kilinochi.demo.zeebe'
-version '1.0-SNAPSHOT'
+version '2.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
 }
 
 dependencies {
+    implementation group: 'org.springframework.cloud', name: 'spring-cloud-stream-dependencies', version: 'Fishtown.SR3'
+    implementation group: 'org.springframework.cloud', name: 'spring-cloud-stream-binder-kafka', version: '3.0.12.RELEASE'
     implementation group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: '2.4.3'
     implementation group: 'io.zeebe.spring', name: 'spring-zeebe-starter', version: '0.26.2'
 
@@ -31,5 +36,23 @@ compileKotlin {
 compileTestKotlin {
     kotlinOptions {
         jvmTarget = "11"
+    }
+}
+
+//mainClassName = "org.kilinochi.demo.zeebe.ApplicationKt"
+
+jar {
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', 'META-INF/*.MF'
+    manifest {
+        attributes 'Main-Class': 'org.kilinochi.demo.zeebe.ApplicationKt'
+    }
+
+    // This line of code recursively collects and copies all of a project's files
+    // and adds them to the JAR itself. One can extend this task, to skip certain
+    // files or particular types at will
+    from {
+        configurations.runtimeClasspath.collect {
+            it.isDirectory()? it: zipTree(it)
+        }
     }
 }

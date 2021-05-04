@@ -1,8 +1,20 @@
 zeebe:
   client:
     broker:
-      contactPoint: 127.0.0.1:26500
+      contactPoint: "http://zeebe:26500"
     security:
       plaintext: true
 server:
   port: 9700
+
+spring:
+  cloud:
+    stream:
+      bindings:
+        variablesInput:
+          group:
+          destination: alfamobile.zeebe.variable
+          contentType: "application/json"
+      kafka:
+        binder:
+          brokers: "http://kafka:9092"
