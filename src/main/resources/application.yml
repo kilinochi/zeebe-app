@@ -12,7 +12,7 @@ spring:
     stream:
       bindings:
         variablesInput:
-          group:
+          group: zeebe-app
           destination: alfamobile.zeebe.variable
           contentType: "application/json"
       kafka:
