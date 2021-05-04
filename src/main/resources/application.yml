@@ -1,7 +1,7 @@
 zeebe:
   client:
     broker:
-      contactPoint: "http://zeebe:26500"
+      contactPoint: "zeebe:26500"
     security:
       plaintext: true
 server:
